@@ -1,0 +1,30 @@
+{
+  "name": "collab-server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "ts-node src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@prisma/client": "^6.16.2",
+    "@y/websocket-server": "^0.1.1",
+    "express": "^5.1.0",
+    "ws": "^8.18.3",
+    "y-websocket": "^3.0.0",
+    "y-websocket-server": "^1.0.2"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.5.2",
+    "@types/ws": "^8.18.1",
+    "prisma": "^6.16.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  }
+}
