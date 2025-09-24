@@ -1,52 +1,24 @@
-import { WebSocketServer, WebSocket } from "ws";
 import * as Y from "yjs";
-import { saveSnapshot, loadSnapshot } from "./persistence.js";
+import type { WebSocket } from "ws";
+import type { IncomingMessage } from "http";
+import { setupAwareness } from "./awareness.js";
+import { log } from "./utils/logger.js";
 
-interface DocMap {
-  [projectId: string]: Y.Doc;
-}
+// Keep docs in memory per projectId
+const docs = new Map<string, Y.Doc>();
 
-export const docs: DocMap = {};
+export function setupWSConnection(ws: WebSocket, req: IncomingMessage) {
+  const url = new URL(req.url || "", `http://${req.headers.host}`);
+  const projectId = url.pathname.slice(1) || "default";
 
-export function startWSServer(port: number) {
-  const wss = new WebSocketServer({ port });
-  console.log(`🟢 Collaboration WS server running on ws://localhost:${port}`);
+  let doc = docs.get(projectId);
+  if (!doc) {
+    doc = new Y.Doc();
+    docs.set(projectId, doc);
+    log.info(`🆕 Created new Y.Doc for project: ${projectId}`);
+  }
 
-  wss.on("connection", async (ws: WebSocket, req) => {
-    const url = new URL(req.url || "", `http://${req.headers.host}`);
-    const projectId = url.searchParams.get("projectId") || "default";
-
-    let doc = docs[projectId];
-    if (!doc) {
-      doc = new Y.Doc();
-
-      const snapshot = await loadSnapshot(projectId);
-      if (snapshot) Y.applyUpdate(doc, snapshot);
-
-      docs[projectId] = doc;
-
-      setInterval(async () => {
-        const update = Y.encodeStateAsUpdate(doc!);
-        await saveSnapshot(projectId, update);
-        console.log(`💾 Saved snapshot for project ${projectId}`);
-      }, 30_000);
-    }
-
-    // Sync Yjs updates with connected WS client
-    ws.on("message", (data: Uint8Array) => {
-      try {
-        Y.applyUpdate(doc!, new Uint8Array(data));
-        // Broadcast to other clients
-        wss.clients.forEach((client) => {
-          if (client !== ws && client.readyState === WebSocket.OPEN) {
-            client.send(data);
-          }
-        });
-      } catch (err) {
-        console.error("⚠️ Failed to apply update", err);
-      }
-    });
-
-    console.log(`🔗 WS client connected for project ${projectId}`);
-  });
+  // Awareness & collaboration setup
+  const clientId = setupAwareness(ws, req, doc, projectId);
+  log.info(`🔗 Client connected (clientId=${clientId}) to project: ${projectId}`);
 }

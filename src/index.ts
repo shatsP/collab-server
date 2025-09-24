@@ -1,14 +1,18 @@
-import express from "express";
-import { startWSServer } from "./websocket.js";
+import http from "http";
+import WebSocket, { WebSocketServer } from "ws";
+import { setupWSConnection } from "./websocket.js";
+import { log } from "./utils/logger.js";
 
-const app = express();
-const PORT = process.env.PORT || 4000;
+const port = process.env.PORT || 1234;
 
-app.get("/", (_, res) => res.send("Collab server running"));
+const server = http.createServer();
 
-app.listen(PORT, () => {
-  console.log(`🌐 HTTP server running on http://localhost:${PORT}`);
+const wss = new WebSocketServer({ server });
+
+wss.on("connection", (ws: WebSocket, req) => {
+  setupWSConnection(ws, req);
 });
 
-// Start WS server on same port (or another)
-startWSServer(1234);
+server.listen(port, () => {
+  log.info(`🚀 Collaboration server running on ws://localhost:${port}`);
+});
